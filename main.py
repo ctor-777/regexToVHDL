@@ -47,11 +47,43 @@ def parse_iteration(regex):
             raise ValueError("curly braquets opened but never closed")
         coma_pos = regex.find(",", begin, end)
         if coma_pos == -1:
-            regex = regex[:begin] + (int(regex[begin+1:end])-1) * regex[begin-1] + parse_iteration(regex[end+1:])
+            try:
+                quant = int(regex[begin+1:end])
+            except:
+                raise ValueError("quantity provided is not correct")
+            regex = regex[:begin] + (quant-1) * regex[begin-1] + parse_iteration(regex[end+1:])
         else:
+            if regex[coma_pos+1] == "}" and regex[coma_pos-1] == "{":
+                raise ValueError("no min or max value provided")
             if regex[coma_pos+1] == "}":
-                regex = regex[:begin] + (int(regex[begin+1:coma_pos])) *regex[begin-1] + "*" + parse_iteration(regex[end+1:])
+               try:
+                   min_value = int(regex[begin+1:coma_pos])
+               except:
+                   raise ValueError("minimun value provided is not correct")
+               regex = regex[:begin] + min_value * regex[begin-1] + "*" + parse_iteration(regex[end+1:])
+            elif regex[coma_pos-1] == "{":
+                try:
+                    max_value = int(regex[coma_pos+1: end])
+                except:
+                    raise ValueError("max value provided is not correct")
+                regex = regex[:begin-1] + max_to_alternative(regex[begin-1], max_value) + parse_iteration(regex[end+1:])
+            else:
+                try:
+                    min_value = int(regex[begin+1:coma_pos])
+                    max_value = int(regex[coma_pos+1:end])
+                except:
+                    raise ValueError("min or max value provided is not correct")
+                regex = regex[:begin-1] + min_value * regex[begin-1] + max_to_alternative(regex[begin-1], max_value-min_value) + parse_iteration(regex[end+1:])
     return regex
-test = "abdc{5}xdxd{2,}"
+
+def max_to_alternative(expression, max_value):
+    converted_expression = "("
+    for i in range(max_value+1):
+        converted_expression += expression * (i)
+        if i != (max_value):
+            converted_expression += "|"
+    return converted_expression + ")"
+
+test = "abdc{5}xdxd{2,4}"
 print(test)
 print(parse_iteration(test))
