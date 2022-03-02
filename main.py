@@ -13,31 +13,29 @@ def get_range(first, last):
 
 
 def parse_regex(regex):
+    begin = regex.find("[")
+    if begin != -1:
 
-    for index, token in enumerate(regex):
-        if token == "[":
-            begin = index
-            end = regex.find("]", begin)
-            if end == -1:
-                raise ValueError("square braquets opened but never closed")
+        end = regex.find("]", begin)
 
-            alternative = "|".join(parse_concat(regex[begin+1:end]))
-            print("alternative: " + alternative)
+        if end == -1:
+            raise ValueError("square braquets opened but never closed")
 
-            regex = regex[:begin] + "(" + alternative + ")" + regex[end+1:]
+        alternative = "|".join(parse_range(regex[begin+1:end]))
 
+        regex = regex[:begin] + "(" + alternative + ")" + parse_regex(regex[end+1:])
 
     return regex
 
-def parse_concat(concat):
-    parsed_concat = ""
-    for index, token in enumerate(concat):
+def parse_range(potential_range):
+    parsed_range = ""
+    for index, token in enumerate(potential_range):
         if token == "-":
-            first = concat[index-1]
-            last = concat[index+1]
-            range = get_range(first, last)
-            parsed_concat += range
-    return parsed_concat
+            first = potential_range[index-1]
+            last = potential_range[index+1]
+            range = get_range(first, last) #TODO change name of that variable
+            parsed_range += range
+    return parsed_range
 
 
 test = "abcd[a-dA-D]fghz[a-e1-3]"
