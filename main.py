@@ -1,10 +1,4 @@
 
-precedence = {
-    "*": 4,
-    "+": 4,
-    "?": 4,
-    "|": 1
-}
 
 def get_range(first, last):
     """
@@ -174,6 +168,16 @@ def max_to_alternative(expression, max_value):
         if i != (max_value):
             converted_expression += "|"
     return converted_expression + ")"
+
+
+def shunting_yard_regex(regex):
+    precedence = {
+        "|": 1,
+        "_": 2,
+        "*": 3,
+        "?": 3
+    }
+
 
 test = "abdc{5}xdxd{2,4}"
 print(test)
