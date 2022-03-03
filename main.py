@@ -177,6 +177,12 @@ def shunting_yard_regex(regex):
         "*": 3,
         "?": 3
     }
+    operators = []
+    final = []
+    for token in regex:
+        if token in precedence:
+            if operators:
+                if precedence[token] > operators[-1]:
 
 
 test = "abdc{5}xdxd{2,4}"
