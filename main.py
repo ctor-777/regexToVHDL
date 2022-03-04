@@ -182,9 +182,29 @@ def shunting_yard_regex(regex):
     for token in regex:
         if token in precedence:
             if operators:
-                if precedence[token] > operators[-1]:
+
+                if precedence[token] > precedence[operators[-1]]:
+                    operators.append(token)
+                else:
+                    for index in range(len(operators)):
+                        if precedence[operators[-1]] >= precedence[token]:
+                            final.append(operators.pop())
+                        else:
+                            break
+                    operators.append(token)
+
+            else:
+                operators.append(token)
+        else:
+            final.append(token)
+
+    if operators:
+        for operator in reversed(operators):
+            final.append(operator)
+    return "".join(final)
 
 
-test = "abdc{5}xdxd{2,4}"
+test = "t_e_s|a_b_a"
+expect = "test___aba__|"
 print(test)
-print(parse_iteration(test))
+print(shunting_yard_regex(test))
