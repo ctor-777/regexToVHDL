@@ -181,17 +181,13 @@ def shunting_yard_regex(regex):
     operators = []
     final = []
     for token in regex:
-        print("token:  " + token)
         if token in precedence or token == ")":
             if operators:
-                print(str(operators) + "   " + str(final))
                 if token == ")":
                     for index in range(len(operators)):
                         if operators[-1] != "(":
-                            print(operators[-1])
                             final.append(operators.pop())
                         else:
-                            print("hh")
                             operators.pop()
                             break
                 elif token == "(":
@@ -205,7 +201,6 @@ def shunting_yard_regex(regex):
                         else:
                             break
                     operators.append(token)
-                print(str(operators) + "   " + str(final))
             else:
                 operators.append(token)
         else:
@@ -216,8 +211,15 @@ def shunting_yard_regex(regex):
             final.append(operator)
     return "".join(final)
 
-
-test = "t_e_s_(a|b)*_x|(a_b_a)*"
-expect = "test___aba__|"
+def explicit_concat(regex):
+    operators = ["?", "|", "*"]
+    final = []
+    for index, token in enumerate(regex):
+        final.append(token)
+        if not token in operators and index < len(regex)-1 and token != "(":
+             if regex[index+1] not in operators and regex[index+1] != ")":
+                final.append("_")
+    return "".join(final)
+test = "tes(a|b)*x|(aba)*"
 print(test)
-print(shunting_yard_regex(test))
+print(shunting_yard_regex(explicit_concat(test)))
