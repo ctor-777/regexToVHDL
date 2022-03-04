@@ -4,8 +4,8 @@ use IEEE.std_logic_1164.all;
 
 entity seqex is
   port(
-    clck, reset, enable: in std_logic;
     n: in Character;
+    clck, reset, enable: in std_logic;
     m: out std_logic
 );
 end entity;

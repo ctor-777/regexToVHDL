@@ -68,9 +68,20 @@ def parse_range(potential_range):
             parsed_range += range
     return parsed_range
 
+def get_parenthesis(regex):
+    stack = -1
+    for index, token in enumerate(reversed(regex)):
+        if token == ")":
+            stack += 1
+        elif token == "(":
+            if stack:
+                stack -= 1
+            else:
+                return regex[-(index+1):]
+
 def parse_iteration(regex):
     """
-    adjust all iteration expression of a regex expression into alternative, concatenation and
+    adjust all iteration expressions of a regex expression into alternative, concatenation and
     klenee star expressions.
 
     parameters:
@@ -91,8 +102,14 @@ def parse_iteration(regex):
     """
     begin = regex.find("{")
     end = regex.find("}")
+
     #if it find a opening curly braquet means there is a quntifier expression
     if begin != -1:
+        if regex[begin-1] == ")":
+            expression = get_parenthesis(regex[:begin])
+        else:
+            expression = regex[begin-1]
+
 
         #if it doesn't find a closing curly braquet means the firs opening braquet is unclosed, raise an error
         if end == -1:
@@ -112,7 +129,7 @@ def parse_iteration(regex):
             #if it finds the value n takes the expression until the first bracket, add
             #a n-1 (there's already one before the braquet) times multiplied value and
             #process the rest of the expression recursively
-            regex = regex[:begin] + (quant-1) * regex[begin-1] + parse_iteration(regex[end+1:])
+            regex = regex[:begin] + (quant-1) * expression + parse_iteration(regex[end+1:])
 
         #if it found a coma means the expression is of the form {min,max}
         else:
@@ -131,7 +148,7 @@ def parse_iteration(regex):
                 #if it finds the value, takes the expression until the opening braquet, adds a min-1
                 #(same reason as before) times multipied value plus a klenee star and process
                 #the rest of the expression recursively
-                regex = regex[:begin] + min_value * regex[begin-1] + "*" + parse_iteration(regex[end+1:])
+                regex = regex[:begin] + min_value * expression + "*" + parse_iteration(regex[end+1:])
 
             #if there's no value before the coma, but there is after it (is an else statement), the expression
             #is of the form {,max}
@@ -144,7 +161,7 @@ def parse_iteration(regex):
 
                 #if it find the value, takes the expression until the opening of the braquet, and adjust the value
                 #in a alternative form (from a{,3} to (|a|aa|aaa)) and process the rest of the expression recursively
-                regex = regex[:begin-1] + max_to_alternative(regex[begin-1], max_value) + parse_iteration(regex[end+1:])
+                regex = regex[:begin-1] + max_to_alternative(expression, max_value) + parse_iteration(regex[end+1:])
 
             #if there's value after and before the coma the expression is of the form {min,max}
             else:
@@ -158,16 +175,17 @@ def parse_iteration(regex):
                 #if it finds the values takes the expression until the opening braquet, add a min-1 multipied
                 #value, adds a modified to alternative max times value (from a{2,4} to aa(|a|aa)) and process the rest
                 #of the expression recursively
-                regex = regex[:begin-1] + min_value * regex[begin-1] + max_to_alternative(regex[begin-1], max_value-min_value) + parse_iteration(regex[end+1:])
+                regex = regex[:begin-1] + min_value * expression + max_to_alternative(expression, max_value-min_value) + parse_iteration(regex[end+1:])
     return regex
 
 def max_to_alternative(expression, max_value):
     converted_expression = "("
     for i in range(max_value+1):
         converted_expression += expression * (i)
-        if i != (max_value):
+        if i != max_value and i != 0:
             converted_expression += "|"
-    return converted_expression + ")"
+        print(str(i) + "   " + str(converted_expression))
+    return converted_expression + ")?"
 
 
 def shunting_yard_regex(regex):
@@ -220,6 +238,6 @@ def explicit_concat(regex):
              if regex[index+1] not in operators and regex[index+1] != ")":
                 final.append("_")
     return "".join(final)
-test = "tes(a|b)*x|(aba)*"
+test = "a{5,7}then(abc){5}"
 print(test)
-print(shunting_yard_regex(explicit_concat(test)))
+print(parse_iteration(test))

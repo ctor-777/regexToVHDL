@@ -8,9 +8,10 @@ architecture behavioral of genseqnfa_tb is
   signal clck,m, reset, enable: std_logic;
   signal n: Character;
   constant req: Character := 'n';
+  constant T: time := 20 ns;
 begin
 
-  nfa: entity work.seqex
+  nfa: entity work.quanex
     port map(
       n => n,
       clck => clck,
@@ -24,22 +25,24 @@ enable <= '1';
   test: process
   begin
     reset <= '1';
-    wait for 20 ns;
+    wait for T;
     reset <= '0';
     n <= 'n';
-    wait for 20 ns;
-    n <= 'p';
-    wait for 20 ns;
+    wait for T;
     n <= 'n';
-    wait for 20 ns;
+    wait for T;
+    n <= 'n';
+    wait for T;
+    n <= 'p';
+    wait for T;
   end process;
 
   process
   begin
     clck <= '1';
-    wait for 10 ns;
+    wait for T/2;
     clck <= '0';
-    wait for 10 ns;
+    wait for T/2;
   end process;
 
 end architecture;
