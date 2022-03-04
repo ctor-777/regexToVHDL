@@ -184,7 +184,6 @@ def max_to_alternative(expression, max_value):
         converted_expression += expression * (i)
         if i != max_value and i != 0:
             converted_expression += "|"
-        print(str(i) + "   " + str(converted_expression))
     return converted_expression + ")?"
 
 
@@ -231,13 +230,25 @@ def shunting_yard_regex(regex):
 
 def explicit_concat(regex):
     operators = ["?", "|", "*"]
+    one_operand_operators = ["?", "*"]
     final = []
     for index, token in enumerate(regex):
         final.append(token)
         if not token in operators and index < len(regex)-1 and token != "(":
              if regex[index+1] not in operators and regex[index+1] != ")":
                 final.append("_")
+        elif token in one_operand_operators and index < len(regex)-1:
+            if regex[index+1] not in operators:
+                final.append("_")
+            final.append("_")
     return "".join(final)
-test = "a{5,7}then(abc){5}"
+test = "a{5,7}[a-b]*"
+
+def full_parse(regex):
+    return explicit_concat(parse_iteration(parse_regex(regex)))
+
 print(test)
-print(parse_iteration(test))
+print(parse_regex(test))
+print(parse_iteration(parse_regex(test)))
+print(explicit_concat(parse_iteration(parse_regex(test))))
+print(shunting_yard_regex(full_parse(test)))
