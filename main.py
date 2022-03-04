@@ -172,6 +172,7 @@ def max_to_alternative(expression, max_value):
 
 def shunting_yard_regex(regex):
     precedence = {
+        "(": 0,
         "|": 1,
         "_": 2,
         "*": 3,
@@ -180,10 +181,22 @@ def shunting_yard_regex(regex):
     operators = []
     final = []
     for token in regex:
-        if token in precedence:
+        print("token:  " + token)
+        if token in precedence or token == ")":
             if operators:
-
-                if precedence[token] > precedence[operators[-1]]:
+                print(str(operators) + "   " + str(final))
+                if token == ")":
+                    for index in range(len(operators)):
+                        if operators[-1] != "(":
+                            print(operators[-1])
+                            final.append(operators.pop())
+                        else:
+                            print("hh")
+                            operators.pop()
+                            break
+                elif token == "(":
+                    operators.append(token)
+                elif precedence[token] > precedence[operators[-1]]:
                     operators.append(token)
                 else:
                     for index in range(len(operators)):
@@ -192,7 +205,7 @@ def shunting_yard_regex(regex):
                         else:
                             break
                     operators.append(token)
-
+                print(str(operators) + "   " + str(final))
             else:
                 operators.append(token)
         else:
@@ -204,7 +217,7 @@ def shunting_yard_regex(regex):
     return "".join(final)
 
 
-test = "t_e_s|a_b_a"
+test = "t_e_s_(a|b)*_x|(a_b_a)*"
 expect = "test___aba__|"
 print(test)
 print(shunting_yard_regex(test))
