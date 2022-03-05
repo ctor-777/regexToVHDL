@@ -9,9 +9,10 @@ architecture behavioral of genseqnfa_tb is
   signal n: Character;
   constant req: Character := 'n';
   constant T: time := 20 ns;
+  constant tested: String := "etes";
 begin
 
-  nfa: entity work.quanex
+  nfa: entity work.generator
     port map(
       n => n,
       clck => clck,
@@ -27,14 +28,10 @@ enable <= '1';
     reset <= '1';
     wait for T;
     reset <= '0';
-    n <= 'n';
-    wait for T;
-    n <= 'n';
-    wait for T;
-    n <= 'n';
-    wait for T;
-    n <= 'p';
-    wait for T;
+    for i in 0 to 3 loop
+      n <= tested(i+1);
+      wait for T;
+    end loop;
   end process;
 
   process
