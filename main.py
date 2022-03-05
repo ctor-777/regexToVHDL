@@ -1,4 +1,5 @@
-
+from string import Template
+import sys
 
 def get_range(first, last):
     """
@@ -247,8 +248,169 @@ test = "a{5,7}[a-b]*"
 def full_parse(regex):
     return explicit_concat(parse_iteration(parse_regex(regex)))
 
-print(test)
-print(parse_regex(test))
-print(parse_iteration(parse_regex(test)))
-print(explicit_concat(parse_iteration(parse_regex(test))))
-print(shunting_yard_regex(full_parse(test)))
+main_template = Template("""
+library IEEE;
+use IEEE.std_logic_1164.all;
+
+entity $name is
+  port(
+    n: in Character;
+    clck, reset, enable: in std_logic;
+    m: out std_logic
+);
+end entity;
+
+architecture behavioral of $name is
+    $arch_signals
+begin
+    signal_0 <= enable;
+
+    $arch_body
+
+    m <= signal_$signal;
+end architecture;
+""")
+
+concatenation_template = Template("""
+$reference: entity work.genseqnfa
+    generic map(
+        req => \'$character\'
+    )
+    port map(
+        clck => clck,
+        reset => reset,
+        enable => $input,
+        n => n,
+        m => $output
+    );
+
+""")
+
+end_alternative = Template("""
+$output <= $input1 or $input2;
+""")
+
+signal_template = Template("""
+signal $name: std_logic;
+""")
+
+def postfix_to_body(regex, signals = 0, instances = 0, inp = 0):
+    operators = ["_", "|", "*", "?"]
+    two_operand_operators = ["_", "|"]
+    one_operand_operators = ["*", "?"]
+    if regex[0] in two_operand_operators:
+        first_operand = regex[1]
+        second_operand = regex[2]
+        if not first_operand in operators:
+            if second_operand in operators:
+                if regex[0] == "_":
+                    evaluation = postfix_to_body(regex[2:], signals+1, instances+1, signals+1)
+                    concat = concatenation_template.substitute({"character": first_operand, "input": "signal_" + str(inp), "output": "signal_" + str(signals+1), "reference": "instance_" + str(instances+1)}) + evaluation[0]
+                    signals = evaluation[1]
+                    instances = evaluation[2]
+                    return (concat, signals, instances)
+                elif regex[0] == "|":
+                    evaluation = postfix_to_body(regex[2:], signals+2, instances+1, inp)
+                    alter = conctenation_template.substitute({"character": first_operand, "input": "signal_" + str(inp), "output": "signal_" + str(signals+1)}) + evaluation[0] + end_alternative.substitute({"output": "signal_" + str(signals+2), "input1": "signal_" + str(signals+1), "input2": "signal_" + str(evaluation[1]), "reference": "instance_" + str(instances+1)})
+                    signals = evaluation[1]
+                    instances = evaluation[2]
+                    return (alter, signals, instances)
+            elif not second_operand in operators:
+                if regex[0] == "_":
+                    concat = concatenation_template.substitute({"character": first_operand, "input": "signal_" + str(inp), "output": "signal_" + str(signals+1), "reference": "instance_" + str(instances+1)}) + concatenation_template.substitute({"character": second_operand, "input": "signal_" + str(signals+1), "output": "signal_" + str(signals+2), "reference":  "instance_" + str(instances+2)})
+                    instances += 2
+                    signals += 2
+                    return (concat, signals, instances)
+                elif regex[0] == "|":
+                    alter = concatenation_template.substitute({"character": first_operand, "input": "signal_" + str(inp), "output": "signal_" + str(signals+1), "reference": "instance_" + str(instances+1)}) + concatenation_template.substitute({"character": second_operand, "input": "signal_" + str(inp), "output": "signal_" + str(signals+2), "reference": "instance_" + str(instances+2)}) + end_alternative.substitute({"output": "signal_" + str(signals+3), "input1": "signal_" + str(signals+1), "input2": "signal_" + str(signals+2)})
+                    instances += 2
+                    signals += 3
+                    return (alter, signals, instances)
+        else:
+            end_first_operator = evaluate_operators_position(regex[1:])
+            second_operand = regex[end_first_operator+1]
+            if second_operand in operators:
+                if regex[0] == "_":
+                    evaluation = postfix_to_body(regex[1:end_first_operator+1], signals, instances, inp)
+                    second_evaluation = postfix_to_body(regex[end_first_operator+1:], evaluation[1], evaluation[2], evalutaion[1])
+                    concat = evaluation[0] + second_evaluation[0]
+                    signals += second_evaluation[1]
+                    instances += second_evaluation[2]
+                    return (concat, signals, instances)
+                elif regex[0] == "|":
+                    evaluation = postfix_to_body(regex[1:end_first_operator+1], signals, instances, inp)
+                    second_evaluation = postfix_to_body(regex[end_first_operator+1:], evaluation[1], evaluation[2], inp)
+                    alter = evaluation[0] + second_evaluation[0] + end_alternative.substitute({"output": "signal_" + str(second_evaluation[1]+1), "input1": "signal_" + str(second_evaluation[1]), "input2": "signal_" + str(evaluation[1]) })
+                    return (alter, second_evaluation[1]+1, second_evaluation[2])
+            else:
+                if regex[0] == "_":
+                    evaluation = postfix_to_body(regex[1:end_first_operator+1], signals, instances, inp)
+                    concat = evaluation[0] + concatenation_template.substitute({"character": second_operand, "input": "signal_" + str(evaluation[1]), "output": "signal_" + str(evaluation[1]+1), "reference": "instance_" + str(evaluation[2]+1)})
+                    signals = evalutaion[1]+1
+                    instances = evaluation[2]+1
+                    return (concat, signals, instances)
+                elif regex[0] == "|":
+                    evaluation = postfix_to_body(regex[1:end_first_operator+1], signals, instances, inp)
+                    alter = evaluation[0] + concatenation_template.subsitute({"character": second_operand, "input": "signal_" + str(inp), "output": "signal_" + str(evaluation[1]+1), "reference": "instance_" + str(evaluation[2]+1)}) + end_alternative.substitute({"output": "signal_" + str(evaluation[1]+2), "input1": "signal_" + str(evaluation[1]), "input2": "signal_" + str(evauation[1]+1)})
+                    return (alter, evaluation[1]+2, evaluation[2]+1)
+    elif regex[0] in one_operand_operators:
+        operand = regex[1]
+        if operand in operators:
+            if regex[0] == "*":
+                evaluation = postfix_to_body(regex[1:], signals+1, instances, signals+1)
+                quant = evaluation[0] + end_alternative.substitute({"output": "signal_" + str(signals+1), "input1": "signal_" + str(inp), "input2": "signal_" + str(evaluation[1])})
+                return (quant, evaluation[1], evaluation[2])
+            elif regex[0] == "?":
+                evaluation = postfix_to_body(regex[1:], signals, instances, inp)
+                quant = evaluation[0] + end_alternative.substitute({"output": "signal_" + str(evaluation[1]+1), "input1": "signal_" + str(inp), "input2": "signal_" + str(evaluation[1])})
+                return (quant, evaluation[1]+1, evaluation[2])
+def evaluate_operators_position(regex, position = 0):
+    two_operand_operators = ["_", "|"]
+    one_operand_operators = ["*", "?"]
+    operators = ["_", "|", "*", "?"]
+    if regex[0] in two_operand_operators:
+        if regex[1] in operators:
+            tmp_pos = evaluate_operators_position(regex[1:])+1
+            if regex[tmp_pos] in operators:
+                tmp_pos2 = evaluate_operators_position(regex[tmp_pos:])
+                return tmp_pos2 + tmp_pos
+            else:
+                return tmp_pos+position+1
+        elif regex[2] in operators:
+            tmp_pos = evaluate_operators_position(regex[2:], position+2)
+            return tmp_pos
+        else:
+            return position+3
+    elif regex[0] in one_operand_operators:
+        if regex[1] in operators:
+            temp = evaluate_operators_position(regex[1:])+1
+            return temp + position
+        else:
+            return position+2
+    else:
+        return position+1
+
+def generate_signals(signals):
+    signals_template = Template("""
+        signal $signals: std_logic;
+    """)
+
+    sign = ""
+    for i in range(signals+1):
+        if i != signals:
+            sign += "signal_" + str(i) + ","
+        else:
+            sign += "signal_" + str(i)
+
+    return signals_template.substitute({"signals": sign})
+
+def generator(regex, name="generator"):
+    body = postfix_to_body(regex)
+    signals = generate_signals(body[1])
+    document = main_template.substitute({"name": name, "arch_signals": signals, "arch_body": body[0], "signal": body[1]})
+
+    with open(name + ".vhdl", "w") as file:
+        file.write(document)
+
+generator("_e?_t_es")
+#tes(test|tost)t
