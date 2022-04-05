@@ -1,3 +1,5 @@
 
 *.cf
 *.ghw
+*.vhdl
+!genseqnfa.vhdl
