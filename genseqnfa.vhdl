@@ -17,8 +17,8 @@ architecture bahavioral of genseqnfa is
 begin
   match:process(clck)
   begin
-    if enable='1' and clck'event and clck='1' then
-      if reset/= '1' then
+    if clck'event and clck='1' then
+      if reset/= '1' and enable= '1' then
         if n=req then
           m <= '1';
         else

@@ -9,7 +9,7 @@ architecture behavioral of genseqnfa_tb is
   signal n: Character;
   constant req: Character := 'n';
   constant T: time := 20 ns;
-  constant tested: String := "etes";
+  constant tested: String := "test";
 begin
 
   nfa: entity work.generator
